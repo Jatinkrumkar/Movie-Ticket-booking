@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 import json
+import random
 
 # --- Basic Data ---
 movielist = {"Avengers: Endgame": (100, ["10:00", "14:00", "17:30"]), "Avengers": (200, ["11:00", "13:40"])}
@@ -78,14 +79,7 @@ def book_tickets():
     # Show confirmation popup
     if messagebox.askyesno("Confirm", receipt):
         # Update seat status to booked (1) and turn buttons red
-        for idx in selected_seats:
-            seat_status[MOVIE_NAME][TIME][idx] = 1
-            buttons[idx].config(bg="red")
-        
-        selected_seats.clear()
-        with open("seats.json", 'w') as f:
-            json.dump(seat_status, f)
-        messagebox.showinfo("Success", "Tickets Booked Successfully!")
+        show_payment_gateway(total)
 
 def showseats(moviename, seat_frame):
     for widget in seat_frame.winfo_children():
@@ -127,6 +121,54 @@ def time_changed(event):
     global TIME
     TIME = sel
     showseats(MOVIE_NAME, seat_frame)
+
+
+def show_payment_gateway(total_amount):
+    """Opens a new window to simulate UPI/QR Payment."""
+    # Create a new pop-up window
+    pay_window = tk.Toplevel(root)
+    pay_window.title("Payment Gateway")
+    pay_window.geometry("300x400")
+    pay_window.grab_set() # Forces the user to interact with this window only
+    
+    tk.Label(pay_window, text="Scan to Pay", font=("Arial", 16, "bold")).pack(pady=10)
+    tk.Label(pay_window, text=f"Amount Due: ₹{total_amount:.2f}", font=("Arial", 12)).pack(pady=5)
+    
+    # --- MOCK QR CODE GENERATOR ---
+    # We use a Canvas to draw something that looks like a QR code without needing external libraries
+    qr_canvas = tk.Canvas(pay_window, width=150, height=150, bg="white", highlightthickness=2, highlightbackground="black")
+    
+    # Draw the 3 big corner targeting squares
+    for x, y in [(10, 10), (100, 10), (10, 100)]:
+        qr_canvas.create_rectangle(x, y, x+40, y+40, fill="black")
+        qr_canvas.create_rectangle(x+10, y+10, x+30, y+30, fill="white")
+        qr_canvas.create_rectangle(x+15, y+15, x+25, y+25, fill="black")
+        
+    # Draw random small black blocks to simulate the QR pattern
+    for _ in range(45):
+        rx = random.randint(1, 14) * 10
+        ry = random.randint(1, 14) * 10
+        # Avoid drawing over our corner squares
+        if not ((rx < 60 and ry < 60) or (rx > 90 and ry < 60) or (rx < 60 and ry > 90)):
+            qr_canvas.create_rectangle(rx, ry, rx+10, ry+10, fill="black")
+            
+    qr_canvas.pack(pady=10)
+    # ------------------------------
+    
+    tk.Label(pay_window, text="Use any UPI App (GPay, PhonePe, Paytm)", fg="gray", font=("Arial", 9)).pack()
+
+    def process_success():
+        """Finalizes the booking after simulated payment."""
+        for idx in selected_seats:
+            seat_status[idx] = 1
+            buttons[idx].config(bg="red") # Turn buttons red permanently
+        
+        selected_seats.clear()
+        messagebox.showinfo("Success", "Payment Received! Tickets have been sent to your email.")
+        pay_window.destroy() # Close the payment window
+
+    tk.Button(pay_window, text="Simulate Payment Complete", command=process_success, 
+              bg="green", fg="white", font=("Arial", 11, "bold")).pack(pady=20)
 
 
 # --- GUI Setup ---
